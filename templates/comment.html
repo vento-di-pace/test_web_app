@@ -4,26 +4,44 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
 </head>
 <body>
-<form action="" method="POST">
+<form id="comment_frm" action="" method="POST" onsubmit="return SubmitCorrectData()">
     <div>
         <label for="surname">Фамилия:</label>
-        <textarea name="surname" id="surname" rows="1">Иванов</textarea>
+        <input type="text" name="surname" id="surname" rows="1" required>
         <label for="name">Имя:</label>
-        <textarea name="name" id="name" rows="1">Василий</textarea>
+        <input type="text" name="name" id="name" rows="1" required>
         <label for="patronymic">Отчество</label>
-        <textarea name="patronymic" id="patronymic" rows="1">Алибабаевич</textarea>
-        <label for="region">Регион</label>
-        <textarea name="region" id="region" rows="1">Прерия</textarea>
-        <label for="city">Город</label>
-        <textarea name="city" id="city" rows="1">Сочи</textarea>
+        <input type="text" name="patronymic" id="patronymic" rows="1">
+
+        <div class='form'>
+            <label for='region'>Регион: </label>
+            <select size="1"  id='region' name="region" onchange="selectRegion(this.value)">
+                <option value=""></option>
+                $regions_list_
+            </select>
+        </div>
+
+        <div class='form'>
+            <div>Населённый пункт:
+                <select id="city" name="city" value=" ">
+                    <option value=" "> </option>
+                </select>
+            </div>
+        </div>
+
         <label for="phone">Телефон</label>
-        <textarea name="phone" id="phone" rows="1">(861)3322223</textarea>
+        <input type="text" name="phone" id="phone" onchange="PhoneCheck(this.value)">
         <label for="email">Электронная почта:</label>
-        <textarea name="email" id="email" rows="1">yaschik@napochte.tam</textarea>
+        <input type="text" name="email" id="email" onchange="EmailCheck(this.value)" value="yaschik@napochte.tam">
         <label for="comment">Комментарий:</label>
-        <textarea name="comment" id="comment" rows="1">Ваш комментарий</textarea>
+        <textarea name="comment" id="comment" rows="1" required>Ваш комментарий</textarea>
     </div>
     <button type="submit">Добавить комментарий</button>
+    <div id="message"></div>
 </form>
+
+<script type="text/javascript" src="../jscript/jquery.js"></script>
+<script type="text/javascript" src="../jscript/select_region.js"></script>
+
 </body>
 </html>

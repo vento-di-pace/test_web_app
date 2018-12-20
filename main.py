@@ -8,21 +8,8 @@ from wsgiref.simple_server import make_server
 import sys
 import re
 from cgi import escape
-
-#--------------Logger function--------------------------------------------------
-def log(message = u'All is ok! :)', debug=False, severity = 0):
-    from sys import argv
-    from time import strftime
-    from codecs import open
-
-    mode='ab'
-    log_file = open(argv[0]+'.log', mode, 'utf-8')
-    if not debug:
-        print unicode(strftime(u'[%Y-%m-%d] %H:%M:%S>> '))+message
-    log_file.write((unicode(strftime(u'[%Y-%m-%d] %H:%M:%S>> '))+u'%s\r\n'%message))#.encode(curr_locale_cp))
-
-    log_file.close()
-#-------------End of Logger-----------------------------------------------------
+import cgi
+from json import JSONEncoder
 
 #fields list
 fields = ('surname',
@@ -34,7 +21,7 @@ fields = ('surname',
         'email',
         'comment'
         )
-region_filter_threshold = 5
+region_filter_threshold = 3
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_NAME = 'sqlite.db'
 
@@ -119,8 +106,17 @@ def comment(environ, start_response):
         except IOError:
             return template_not_found(environ, start_response)
 
+        row = CONNECTION.cursor().execute('''
+            SELECT DISTINCT region
+            FROM regions;
+            ''')
+        region_rows = row.fetchall()
+        CONNECTION.commit()
+
+        regions_list = u'\n'.join(['<option>%s</option>'%region_name for region_name in region_rows])
+
         start_response('200 OK', [('Content-Type', 'text/html')])
-        return [template.substitute({})]
+        return [template.substitute({'regions_list_': regions_list.encode('utf-8')})]
 
 
 # Delete comment
@@ -140,7 +136,7 @@ def stat(environ, start_response):
         try:
             request_body_size = int(environ['CONTENT_LENGTH'])
             request_body = environ['wsgi.input'].read(request_body_size).split('&')
-            print str(request_body)
+
         except (TypeError, ValueError):
             request_body = []
         else:
@@ -151,7 +147,7 @@ def stat(environ, start_response):
         row = CONNECTION.cursor().execute('''
             SELECT city, COUNT(city)
             FROM maintable GROUP BY city;
-        '''%region_filter_threshold)
+        ''')
         comments_qs = row.fetchall()
         CONNECTION.commit()
 
@@ -164,10 +160,11 @@ def stat(environ, start_response):
         comments_qs = row.fetchall()
         CONNECTION.commit()
 
-        comments = u''.join([u'<tr><td><a name="region" onclick="this.parentNode.submit();return false;">%s</a></td><td>%s</td></tr>'%( line[0], line[1]) for line in comments_qs])
+        comments = u''.join([u'<tr><td onclick=''''Go("%s")''''>%s</td><td>%s</td></tr>'%(line[0], line[0], line[1]) for line in comments_qs])
+
 
     try:
-        with open('templates/index.html') as template_file:
+        with open('templates/stat.html') as template_file:
             template = Template(template_file.read())
     except IOError:
         return template_not_found(environ, start_response)
@@ -175,6 +172,35 @@ def stat(environ, start_response):
     start_response('200 OK', [('Content-Type', 'text/html')])
     return [template.substitute({'comments': comments.encode('utf-8'), 'saved': ''})]
 
+def jquery_sc (environ, start_response):
+    sc = open(os.path.join(CURRENT_DIR, 'jscript', 'jquery.js'), 'r')
+
+    start_response('200 OK', [('Content-Type', 'text/javascript')])
+    return [sc.read()]
+
+def reg_sel_sc (environ, start_response):
+    sc = open(os.path.join(CURRENT_DIR, 'jscript', 'select_region.js'), 'r')
+
+    start_response('200 OK', [('Content-Type', 'text/javascript')])
+    return [sc.read()]
+
+def region_selector (environ, start_response):
+
+    args = environ['QUERY_STRING']
+    id_region = args.split('=')[1]
+    id_region = urllib.unquote_plus(id_region)#.decode('utf-8').encode('cp1251')
+
+    rows = CONNECTION.cursor().execute('SELECT city FROM regions WHERE region="%s"'%id_region)
+
+    data = rows.fetchall()
+    CONNECTION.commit()
+##    encoded_data = [item[0].encode('utf-8') for item in data]
+
+##    print('Content-Type: application/json\n\n')
+##    print(JSONEncoder().encode(data))
+    start_response('200 OK', [('Content-Type', 'application/json')])
+    return [JSONEncoder().encode(data)]
+##    return [JSONEncoder().encode([item[0].encode('utf-8') for item in data])]
 
 # Map
 urls = [
@@ -182,6 +208,11 @@ urls = [
     (r'add/?$', comment),
     (r'delete/(.+)$', delete),
     (r'stat/?$', stat),
+    (r'jscript/jquery.js$', jquery_sc),
+    (r'jscript/select_region.js$', reg_sel_sc),
+    (r'region_selector/?$', region_selector)
+
+
 ]
 
 
